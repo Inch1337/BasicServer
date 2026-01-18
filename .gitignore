@@ -1,1 +1,4 @@
 example/
+.env
+main.exe
+__debug_bin

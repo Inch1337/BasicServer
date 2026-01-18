@@ -1,11 +1,16 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"product-api/internal/config"
+	"product-api/internal/database"
 	"strconv"
+
+	_ "github.com/lib/pq"
 )
 
 type Product struct {
@@ -19,6 +24,28 @@ var (
 	products  = []Product{}
 	idCounter = 1
 )
+
+var DB *sql.DB
+
+func main() {
+	config.Load()
+	cfg := config.New()
+
+	database.InitDb(cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBHost, cfg.DBPort)
+
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", homeHandler)
+	mux.HandleFunc("/health", healthHandler)
+	mux.HandleFunc("/products", ProductsHandler)
+	mux.HandleFunc("/products/", GetProductHandler)
+
+	fmt.Printf("Start server on %s\n", cfg.ServerPort)
+
+	if err := http.ListenAndServe(cfg.ServerPort, mux); err != nil {
+		log.Fatal(err)
+	}
+}
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -91,20 +118,4 @@ func GetProductHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "Product not found", http.StatusNotFound)
-}
-
-func main() {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/", homeHandler)
-	mux.HandleFunc("/health", healthHandler)
-	mux.HandleFunc("/products", ProductsHandler)
-	mux.HandleFunc("/products/", GetProductHandler)
-
-	fmt.Println("Start server on :8081")
-
-	err := http.ListenAndServe(":8081", mux)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
