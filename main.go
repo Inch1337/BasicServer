@@ -60,7 +60,7 @@ func ProductsHandler(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "application/json")
 
-		json.NewEncoder(w).Encode(products)
+		json.NewEncoder(w).Encode(p)
 
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -81,15 +81,16 @@ func GetProductHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	product := Product{
-		ID:          id,
-		Name:        "Dynamic Product",
-		Description: "Found by ID",
-		Price:       500,
+	for _, item := range products {
+		if item.ID == id {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(item)
+
+			return
+		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(product)
+	http.Error(w, "Product not found", http.StatusNotFound)
 }
 
 func main() {
