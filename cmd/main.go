@@ -21,8 +21,8 @@ func main() {
 
 	mux.HandleFunc("/", handlers.HomeHandler)
 	mux.HandleFunc("/health", handlers.HealthHandler)
-	mux.HandleFunc("/products", handlers.CreateProduct)
-	mux.HandleFunc("/products/", handlers.GetProduct)
+	mux.HandleFunc("/products", handlers.ProductsHandler)
+	mux.HandleFunc("/products/", handlers.SingleProductHandler)
 
 	fmt.Printf("Start server on %s\n", cfg.ServerPort)
 
