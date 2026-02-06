@@ -1,12 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
-	"product-api/internal/config"
-	"product-api/internal/database"
-	"product-api/internal/handlers"
+	"product-test/internal/config"
+	"product-test/internal/database"
+	"product-test/internal/handlers"
+	"product-test/internal/repository"
+	"product-test/internal/service"
 
 	_ "github.com/lib/pq"
 )
@@ -17,15 +18,16 @@ func main() {
 
 	database.InitDb(cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBHost, cfg.DBPort)
 
+	productRepo := repository.NewProductRepository(database.DB)
+
+	productService := service.NewProductService(productRepo)
+
+	productHandler := handlers.NewProductHandler(productService)
+
 	mux := http.NewServeMux()
+	productHandler.RegisterRoutes(mux)
 
-	mux.HandleFunc("/", handlers.HomeHandler)
-	mux.HandleFunc("/health", handlers.HealthHandler)
-	mux.HandleFunc("/products", handlers.ProductsHandler)
-	mux.HandleFunc("/products/", handlers.SingleProductHandler)
-
-	fmt.Printf("Start server on %s\n", cfg.ServerPort)
-
+	log.Printf("Start server on %s\n", cfg.ServerPort)
 	if err := http.ListenAndServe(cfg.ServerPort, mux); err != nil {
 		log.Fatal(err)
 	}

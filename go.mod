@@ -1,4 +1,4 @@
-module product-api
+module product-test
 
 go 1.25.3
 
