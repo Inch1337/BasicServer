@@ -9,6 +9,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
+//go:embed migrations/*.sql
 var migrationsFS embed.FS
 
 func InitDB(user, password, dbname, host, port string) (*sql.DB, error) {
