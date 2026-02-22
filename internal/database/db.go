@@ -2,46 +2,46 @@ package database
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"log"
-	"os"
 
 	_ "github.com/lib/pq"
 )
 
-var DB *sql.DB
+var migrationsFS embed.FS
 
-func InitDb(user, password, dbname, host, port string) {
+func InitDB(user, password, dbname, host, port string) (*sql.DB, error) {
 	connStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable",
 		user, password, dbname, host, port)
 
-	var err error
-
-	DB, err = sql.Open("postgres", connStr)
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatal("Error opening DB: ", err)
+		return nil, fmt.Errorf("open db: %w", err)
 	}
 
-	if err = DB.Ping(); err != nil {
-		log.Fatal("Error connecting to DB: ", err)
+	if err = db.Ping(); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("ping db: %w", err)
 	}
 
-	fmt.Println("Successfully connected to database")
-	applyMigrations()
+	log.Println("Successfully connected to database")
+	if err := applyMigrations(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	log.Println("Migrations applied successfully")
+	return db, nil
 }
 
-func applyMigrations() {
-	sqlBytes, err := os.ReadFile("migrations/init.sql")
+func applyMigrations(db *sql.DB) error {
+	sqlBytes, err := migrationsFS.ReadFile("migrations/init.sql")
 	if err != nil {
-		log.Fatal("Error reading migration file: ", err)
+		return fmt.Errorf("read migration: %w", err)
 	}
-
-	sqlQuery := string(sqlBytes)
-
-	_, err = DB.Exec(sqlQuery)
+	_, err = db.Exec(string(sqlBytes))
 	if err != nil {
-		log.Fatal("Error applying migrations: ", err)
+		return fmt.Errorf("apply migration: %w", err)
 	}
-
-	fmt.Println("Migrations applied successfully!")
+	return nil
 }

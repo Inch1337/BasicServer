@@ -7,8 +7,10 @@ import (
 	"product-test/internal/models"
 )
 
+var ErrNotFound = errors.New("product not found")
+
 type ProductRepository interface {
-	GetAll(ctx context.Context) ([]models.Product, error)
+	GetAll(ctx context.Context, limit, offset int) ([]models.Product, error)
 	GetByID(ctx context.Context, id int) (*models.Product, error)
 	Create(ctx context.Context, product *models.Product) error
 	Update(ctx context.Context, product *models.Product) error
@@ -23,9 +25,15 @@ func NewProductRepository(db *sql.DB) ProductRepository {
 	return &productRepo{db: db}
 }
 
-func (r *productRepo) GetAll(ctx context.Context) ([]models.Product, error) {
-	query := `SELECT id, name, description, price FROM products`
-	rows, err := r.db.QueryContext(ctx, query)
+func (r *productRepo) GetAll(ctx context.Context, limit, offset int) ([]models.Product, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	query := `SELECT id, name, description, price FROM products ORDER BY id LIMIT $1 OFFSET $2`
+	rows, err := r.db.QueryContext(ctx, query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +61,7 @@ func (r *productRepo) GetByID(ctx context.Context, id int) (*models.Product, err
 	err := r.db.QueryRowContext(ctx, query, id).Scan(&p.ID, &p.Name, &p.Description, &p.Price)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("product not found")
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
@@ -68,7 +76,7 @@ func (r *productRepo) Update(ctx context.Context, p *models.Product) error {
 	}
 	rows, _ := res.RowsAffected()
 	if rows == 0 {
-		return errors.New("product not found")
+		return ErrNotFound
 	}
 	return nil
 }
@@ -81,7 +89,7 @@ func (r *productRepo) Delete(ctx context.Context, id int) error {
 	}
 	rows, _ := res.RowsAffected()
 	if rows == 0 {
-		return errors.New("product not found")
+		return ErrNotFound
 	}
 	return nil
 }
